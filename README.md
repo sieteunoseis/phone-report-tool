@@ -14,6 +14,11 @@ Tested using Python 3.9.4
 * source myenv/bin/activate
 * python3 -m pip install --upgrade pip
 
+### Create Virtual Enviroment with pynenv (Windows)
+* python -m venv myenv
+* .\myenv\Scripts\activate
+* python -m pip install --upgrade pip
+
 ### Update pyvenv.cfg if not using requirements.txt (MAC OS X)
 * nano myenv/pyvenv.cfg
 * include-system-site-packages = true

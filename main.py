@@ -47,6 +47,7 @@ import tkinter.scrolledtext as tkst
 import urllib
 import xlsxwriter
 from collections import Counter
+import ctypes
 
 os.environ["PATH"] += "/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
 
