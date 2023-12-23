@@ -162,3 +162,6 @@ cython_debug/
 # PyInstaller folders
 build
 dist
+.DS_Store
+myenv
+venv
