@@ -50,3 +50,9 @@ rm -rf Phone\ Report\ Tool
 
 ### Testing app (MAC OS X)
 * ./dist/Phone\ Report\ Tool.app/Contents/MacOS/Phone\ Report\ Tool
+
+## Giving Back
+
+If you would like to support my work and the time I put in creating the code, you can click the image below to get me a coffee. I would really appreciate it (but is not required).
+
+[Buy Me a Coffee](https://www.buymeacoffee.com/automatebldrs)
