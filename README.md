@@ -12,9 +12,11 @@ Tested using Python 3.11
 * rmdir /s /q build dist
 
 ### Create Virtual Enviroment with pynenv (MAC OS X)
-* python3 -m venv myenv
-* source myenv/bin/activate
-* python3 -m pip install --upgrade pip
+```
+python3 -m venv myenv
+source myenv/bin/activate
+python3 -m pip install --upgrade pip
+```
 
 ### Create Virtual Enviroment with pynenv (Windows)
 * python -m venv myenv

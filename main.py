@@ -48,6 +48,8 @@ import urllib
 import xlsxwriter
 from collections import Counter
 import ctypes
+import pandas as pd
+from multiprocessing import cpu_count
 
 os.environ["PATH"] += "/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
 
@@ -282,7 +284,7 @@ class Application(ttk.Frame):
 	##											##
 	##############################################
 
-	def xlsx_phone_report(self, cdp, filename, data, dpdata):
+	def xlsx_phone_report(self, filename, data, dpdata):
 		# is this application frozen by PyInstaller or CX Freeze?
 		if getattr(sys, 'frozen', False):
 			try:
@@ -302,9 +304,9 @@ class Application(ttk.Frame):
 		# Create an new Excel file and add a worksheet.
 		if os.name == 'nt':
 			filepath = os.path.join(os.environ['USERPROFILE'], "Downloads", filename)
-			workbook = xlsxwriter.Workbook(filepath)
+			workbook = xlsxwriter.Workbook(filepath,{"nan_inf_to_errors": True})
 		else:
-			workbook = xlsxwriter.Workbook(filepath)
+			workbook = xlsxwriter.Workbook(filepath,{"nan_inf_to_errors": True})
 
 		workbook.set_properties({
 			'title': 'Cisco Unified Communications Phone Inventory',
@@ -334,28 +336,12 @@ class Application(ttk.Frame):
 
 		dpwrksht.autofilter('A1:C1')
 
-		# Lets find the object with the most attributes
-		lens = [len(val) for val in data]
-		index = lens.index(max(lens))
-
-		new_list = []
-		for i in data:
-			for j in i:
-				new_list.append(j)
-		uniq = Counter(new_list)
-
-		# Set column names
-		columnnames = list(uniq.keys())
-		for i in range(len(columnnames)):
-			worksheet.write(0, i, columnnames[i],bold)
-
-		# Write some numbers, with row/column notation.
-		for index, phone in enumerate(data):
-			n = 0
-			for attr, value in phone.items():
-				col_index = columnnames.index(attr)
-				worksheet.write(index + 1, col_index, value)
-				n += 1
+		for ind, col_name in enumerate(data.columns):
+			worksheet.write(0, ind,col_name,bold)
+			
+		for index, row in data.iterrows():
+			for col_name in data.columns:
+				worksheet.write(index + 1, data.columns.get_loc(col_name), row[col_name])
 
 		# Autofit the worksheet and close
 		worksheet.autofit()
@@ -623,7 +609,7 @@ class Application(ttk.Frame):
 		if not self.task_list:
 			self.listen(force_start=True)
 		# We can use a with statement to ensure threads are cleaned up promptly
-		with concurrent.futures.ThreadPoolExecutor(max_workers=50) as executor:
+		with concurrent.futures.ThreadPoolExecutor(max_workers=cpu_count()) as executor:
 			# Start the load operations and mark each future with its URL
 			future_to_url = {executor.submit(self.load_url, url['port_url'], 120): url['port_url'] for url in self.ris_results}
 			for index, future in enumerate(concurrent.futures.as_completed(future_to_url)):
@@ -657,7 +643,7 @@ class Application(ttk.Frame):
 		if not self.task_list:
 			self.listen(force_start=True)
 		# We can use a with statement to ensure threads are cleaned up promptly
-		with concurrent.futures.ThreadPoolExecutor(max_workers=50) as executor:
+		with concurrent.futures.ThreadPoolExecutor(max_workers=cpu_count()) as executor:
 			# Start the load operations and mark each future with its URL
 			future_to_url = {executor.submit(self.load_url, url['status_url'], 120):
 					url['status_url'] for url in self.ris_results}
@@ -691,7 +677,7 @@ class Application(ttk.Frame):
 		if not self.task_list:
 			self.listen(force_start=True)
 		# We can use a with statement to ensure threads are cleaned up promptly
-		with concurrent.futures.ThreadPoolExecutor(max_workers=50) as executor:
+		with concurrent.futures.ThreadPoolExecutor(max_workers=cpu_count()) as executor:
 			# Start the load operations and mark each future with its URL
 			future_to_url = {executor.submit(self.load_url, url['network_url'], 240):
 					url['network_url'] for url in self.ris_results}
@@ -809,19 +795,6 @@ class Application(ttk.Frame):
 								'network_url': network_url
 							}
 							self.ris_results.append(data)
-				for node in result['SelectCmDeviceResult']['CmNodes']['item']:
-					if node['CmDevices'] != None:
-						for device in node['CmDevices']['item']:
-							try:
-								ipaddress = device['IPAddress']['item'][0]['IP']
-							except Exception as e:
-								if self.debugging == 'Yes':
-									self.put_line_to_queue(e)
-
-								continue
-							# Update Dictionary with IP Address of Device
-							match_key = next((key for key,l in self.inputvar.items() if l['%MAC'] == device['Name']), None)
-							self.inputvar[match_key]['%IPADDRESS'] = str(ipaddress)
 		except Exception as e:
 			if self.debugging == 'Yes':
 				self.put_line_to_queue(e)
@@ -860,7 +833,7 @@ class Application(ttk.Frame):
 												 "select count(Device.name) Device_count, DevicePool.name Device_Pool, typemodel.name Device_Type from Device inner join DevicePool on Device.fkDevicePool=DevicePool.pkid inner join typemodel on device.tkmodel=typemodel.enum group by DevicePool.name,typemodel.name order by DevicePool.name")
 
 			registrationdynamic = self.execute_sql_query(self.service, "Get Registration Dynamic",
-												 "select d.name, d.description,rd.lastknownipaddress,rd.lastknownucm,rd.lastseen,rd.lastactive from device as d left join registrationdynamic as rd on rd.fkdevice = d.pkid where d.tkclass = '1' order by name")
+												 "select d.name,rd.lastknownipaddress,rd.lastknownucm,rd.lastseen,rd.lastactive from device as d left join registrationdynamic as rd on rd.fkdevice = d.pkid where d.tkclass = '1' order by name")
 
 			self.phone_array = []
 			self.ris_results = []
@@ -884,11 +857,10 @@ class Application(ttk.Frame):
 			for item in registrationdynamic['response']:
 				self.dynamic_results.append({
 					"name": str(item[0].text),
-					"description": str(item[1].text),
-					"lastknownipaddress": str(item[2].text),
-					"lastknowncucm": str(item[3].text),
-					"lastseen": str(datetime.fromtimestamp(int(item[4].text))),
-					"lastactive": str(datetime.fromtimestamp(int(item[5].text)))
+					"lastknownipaddress": str(item[1].text),
+					"lastknowncucm": str(item[2].text),
+					"lastseen": str(datetime.fromtimestamp(int(item[3].text))),
+					"lastactive": str(datetime.fromtimestamp(int(item[4].text)))
 				})
 
 			self.chunks = [self.phone_array[x:x + 1000] for x in range(0, len(self.phone_array), 1000)]
@@ -909,8 +881,8 @@ class Application(ttk.Frame):
 				self.put_line_to_queue('Processing batch: ' + str(index + 1))
 				self.execute_ris_query(self.ris_service, "Get Phone", chunk)
 				if (index + 1) % 15 == 0:
+					self.put_line_to_queue('Throttling RisPort Requests for 60 seconds.\n')
 					time.sleep(60)
-					self.put_line_to_queue('Throttling RisPort Request')
 				if str(index + 1) == num_chunks:
 					self.put_line_to_queue('Batch: ' + str(index + 1) + ' processed.\n')
 				else:
@@ -922,19 +894,18 @@ class Application(ttk.Frame):
 				self.get_status_info()
 				self.get_network_info()
 				self.put_line_to_queue('\nFinished advanced information for devices.')
-			
-			# Merge RISPORT and AXL Results
-			for index, item in enumerate(self.ris_results):
-				item.update(next(x for x in self.dynamic_results if x["name"] == item["name"]))
+
+			# Let's merge the two dataframes and fill in the null values
+			df1 = pd.DataFrame(self.ris_results)	
+			df2 = pd.DataFrame(self.dynamic_results)	
+			df_merged = df1.merge(df2, on='name') 
+			df_merged = df_merged.where(df_merged.notnull(), None)
 
 			if self.debugging == 'Yes':
 				self.put_line_to_queue(self.ris_results)
 
 			self.put_line_to_queue('Creating Excel Report with results.\n')
-			if cdp == "Yes":
-				self.xlsx_phone_report("Yes","phone_inventory.xlsx",self.ris_results, self.dp_results)
-			else:
-				self.xlsx_phone_report("No","phone_inventory.xlsx",self.ris_results, self.dp_results)
+			self.xlsx_phone_report("phone_inventory.xlsx",df_merged, self.dp_results)
 			self.put_line_to_queue('Report successfully generated.\n')
 
 			# close out task
