@@ -16,20 +16,20 @@ Tested using Python 3.11
 python3 -m venv myenv
 source myenv/bin/activate
 python3 -m pip install --upgrade pip
+pip3 install -r requirements.txt
 ```
 
 ### Create Virtual Enviroment with pynenv (Windows)
-* python -m venv myenv
-* .\myenv\Scripts\activate
-* python -m pip install --upgrade pip
-
+```
+python -m venv myenv
+.\myenv\Scripts\activate
+python -m pip install --upgrade pip
+pip3 install -r requirements.txt
+```
 ### Update pyvenv.cfg if not using requirements.txt (MAC OS X)
 * nano myenv/pyvenv.cfg
 * include-system-site-packages = true
 * Control-O, Control-X, y
-
-### Install package requirements
-* pip3 install -r requirements.txt
 
 ### Compile with pyinstaller (MAC OS X)
 * pyinstaller main.spec --noconfirm
