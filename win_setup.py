@@ -23,7 +23,7 @@ for p in par:
   par[p]=par[p].split("#",1)[0].strip() # To get rid of inline comments
 globals().update(par)
 
-includes = ['sqlite3', 'idna', 'idna.idnadata','xlsxwriter']
+includes = ['sqlite3', 'idna', 'idna.idnadata','pandas','xlsxwriter']
 
 base = None
 if sys.platform == 'win32':
