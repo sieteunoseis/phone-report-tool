@@ -910,7 +910,7 @@ class Application(ttk.Frame):
 				else:
 					self.put_line_to_queue('RisPort Fault. Maximum retries reached. Skipping batch: ' + str(index + 1))
 					self.put_line_to_queue('Report may be incomplete.')
-					break
+					pass
 						
 				if str(index + 1) == num_chunks:
 					self.put_line_to_queue('Batch: ' + str(index + 1) + ' processed.')
