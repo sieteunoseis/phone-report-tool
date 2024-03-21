@@ -3,7 +3,7 @@ A PythonTk GUI program to pull phone reports from Cisco Unified Communications M
 
 ![Phone Report Tool](/screenshot/screenshot.png?raw=true "Main Window")
 
-Tested using Python 3.11
+Tested using Python 3.8.18 (Issues with Tkinter on version 3.9 and above)
 
 ### Clean up directory (MAC OS X)
 * rm -rf build dist myenv
@@ -13,9 +13,9 @@ Tested using Python 3.11
 
 ### Create Virtual Enviroment with pynenv (MAC OS X)
 ```
-python3 -m venv myenv
-source myenv/bin/activate
-python3 -m pip install --upgrade pip
+pyenv virtualenv 3.8.18 myenv
+pyenv activate myenv
+pip install --upgrade pip
 pip3 install -r requirements.txt
 ```
 

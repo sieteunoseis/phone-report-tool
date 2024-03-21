@@ -6,7 +6,7 @@ block_cipher = None
 
 a = Analysis(['main.py'],
              binaries=[],
-             datas=[ ('db/axl_connections.db', '.'),("schema", "schema"),("help", "help"),("reports", "reports"),("images", "images") ],
+             datas=[ ('db/axl_connections.db', '.'),("schema", "schema"),("help", "help"),("images", "images") ],
              hiddenimports=[],
              hookspath=[],
              runtime_hooks=[],

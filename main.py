@@ -50,6 +50,7 @@ from collections import Counter
 import ctypes
 import pandas as pd
 from multiprocessing import cpu_count
+from functools import reduce
 
 os.environ["PATH"] += "/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
 
@@ -299,13 +300,14 @@ class Application(ttk.Frame):
 		else:
 			application_path = os.path.dirname(os.path.abspath(__file__))
 			
-		filepath = os.path.join(application_path, "reports", filename)
+		filepath = ''
 
 		# Create an new Excel file and add a worksheet.
 		if os.name == 'nt':
 			filepath = os.path.join(os.environ['USERPROFILE'], "Downloads", filename)
 			workbook = xlsxwriter.Workbook(filepath,{"nan_inf_to_errors": True})
 		else:
+			filepath = os.path.join(os.path.join(os.getenv('HOME')), 'Downloads', filename)
 			workbook = xlsxwriter.Workbook(filepath,{"nan_inf_to_errors": True})
 
 		workbook.set_properties({
@@ -344,6 +346,7 @@ class Application(ttk.Frame):
 				worksheet.write(index + 1, data.columns.get_loc(col_name), row[col_name])
 
 		# Autofit the worksheet and close
+		worksheet.autofilter(0, 0, data.shape[0], data.shape[1])
 		worksheet.autofit()
 		workbook.close()
 
@@ -711,7 +714,7 @@ class Application(ttk.Frame):
 		l = dict(self.phonetype_array)
 		return l[str(enum)]
 
-	def execute_ris_query(self, service, name, members=[]):
+	def execute_ris_query(self, service, members=[]):
 		# RISPORT Search Settings
 		CmSelectionCriteria = {
 			'MaxReturnedDevices': '',
@@ -735,71 +738,74 @@ class Application(ttk.Frame):
 		status_url = ''
 		network_url = ''
 
-		result = service.selectCmDeviceExt(CmSelectionCriteria=CmSelectionCriteria, StateInfo=StateInfo)
+		try:
+			result = service.selectCmDeviceExt(CmSelectionCriteria=CmSelectionCriteria, StateInfo=StateInfo)
+		except Fault as fault:
+			return "Fault"
 
 		try:
-			if name == "Get Phone":
-				for node in result['SelectCmDeviceResult']['CmNodes']['item']:
-					if node['CmDevices'] != None:
-						for device in node['CmDevices']['item']:
-							try:
-								ccm_registered = node['Name']
-								ipaddress = device['IPAddress']['item'][0]['IP']
-								directorynumber = device['LinesStatus']['item'][0]['DirectoryNumber']
-								model = self.search_model(device['Model'])
-								webaccess = device['Httpd']
-								status = device['Status']
-								port_url = ''
-								status_url = ''
-								network_url = ''
-								if webaccess == "Yes" and status == "Registered":
-									if model == "Cisco 7940" or model == "Cisco 7960" or model == "Cisco 8945":
-										port_url = "http://" + ipaddress + "/PortInformation?1"
-									elif model == "Cisco 3905":
-										port_url = "http://" + ipaddress + "/Network.html"
-										# network_url = "http://" + ipaddress + "/Network_Setup.html"
-									elif model == "Cisco DX80":
-										port_url = "http://" + ipaddress + "/?adapter=device.statistics.port.network"
-									elif model == "Cisco 7925":
-										network_url = "https://" + ipaddress + "/NetworkInformation"
-									elif model == "Cisco 8821" or model == "Cisco 7937" or model == "Cisco 7921" or model == "Cisco 7912" or model == "Cisco 7910":
-										# Models that dont have CDP information
-										pass
-									else:
-										port_url = "http://" + ipaddress + "/CGI/Java/Serviceability?adapter=device.statistics.port.network"
-										status_url = "http://" + ipaddress + "/CGI/Java/Serviceability?adapter=device.settings.status.messages"
-										network_url = "http://" + ipaddress + "/CGI/Java/Serviceability?adapter=device.statistics.configuration"
-							except Exception as e:
-								if self.debugging == 'Yes':
-									self.put_line_to_queue(e)
+			for node in result['SelectCmDeviceResult']['CmNodes']['item']:
+				if node['CmDevices'] != None:
+					for device in node['CmDevices']['item']:
+						try:
+							ccm_registered = node['Name']
+							ipaddress = device['IPAddress']['item'][0]['IP']
+							directorynumber = device['LinesStatus']['item'][0]['DirectoryNumber']
+							model = self.search_model(device['Model'])
+							webaccess = device['Httpd']
+							status = device['Status']
+							port_url = ''
+							status_url = ''
+							network_url = ''
+							if webaccess == "Yes" and status == "Registered":
+								if model == "Cisco 7940" or model == "Cisco 7960" or model == "Cisco 8945":
+									port_url = "http://" + ipaddress + "/PortInformation?1"
+								elif model == "Cisco 3905":
+									port_url = "http://" + ipaddress + "/Network.html"
+									# network_url = "http://" + ipaddress + "/Network_Setup.html"
+								elif model == "Cisco DX80":
+									port_url = "http://" + ipaddress + "/?adapter=device.statistics.port.network"
+								elif model == "Cisco 7925":
+									network_url = "https://" + ipaddress + "/NetworkInformation"
+								elif model == "Cisco 8821" or model == "Cisco 7937" or model == "Cisco 7921" or model == "Cisco 7912" or model == "Cisco 7910":
+									# Models that dont have CDP information
+									pass
+								else:
+									port_url = "http://" + ipaddress + "/CGI/Java/Serviceability?adapter=device.statistics.port.network"
+									status_url = "http://" + ipaddress + "/CGI/Java/Serviceability?adapter=device.settings.status.messages"
+									network_url = "http://" + ipaddress + "/CGI/Java/Serviceability?adapter=device.statistics.configuration"
+						except Exception as e:
+							if self.debugging == 'Yes':
+								self.put_line_to_queue(e)
 
-								continue
+							continue
 
-							data = {
-								'name': str(device['Name']),
-								'model': model,
-								'directory': directorynumber,
-								'description': str(device['Description']),
-								'status': str(device['Status']),
-								'laststatuschange': str(datetime.fromtimestamp(device['TimeStamp'])),
-								'ccmregistered': ccm_registered,
-								'protocol': str(device['Protocol']),
-								'activeload': str(device['ActiveLoadID']),
-								'inactiveload': str(device['InactiveLoadID']),
-								'downloadstatus': str(device['DownloadStatus']),
-								'emuserid': str(device['LoginUserId']),
-								'ipaddress': str(ipaddress),
-								'webaccess': str(webaccess),
-								'port_url': port_url,
-								'status_url': status_url,
-								'network_url': network_url
-							}
-							self.ris_results.append(data)
+						data = {
+							'name': str(device['Name']),
+							'model': model,
+							'directory': directorynumber,
+							'description': str(device['Description']),
+							'status': str(device['Status']),
+							'laststatuschange': str(datetime.fromtimestamp(device['TimeStamp'])),
+							'ccmregistered': ccm_registered,
+							'protocol': str(device['Protocol']),
+							'activeload': str(device['ActiveLoadID']),
+							'inactiveload': str(device['InactiveLoadID']),
+							'downloadstatus': str(device['DownloadStatus']),
+							'emuserid': str(device['LoginUserId']),
+							'ipaddress': str(ipaddress),
+							'webaccess': str(webaccess),
+							'port_url': port_url,
+							'status_url': status_url,
+							'network_url': network_url
+						}
+						self.ris_results.append(data)
+			return "Success"
 		except Exception as e:
 			if self.debugging == 'Yes':
 				self.put_line_to_queue(e)
 	
-	def get_phones(self,cdp,task_thread):
+	def get_phones(self,cdp,task_thread,max_retries=5):
 		start = time.time()
 		#   "kick start" listener if task list is empty
 		if not self.task_list:
@@ -821,17 +827,25 @@ class Application(ttk.Frame):
 			self.client = Client(wsdl=self.wsdl, transport=self.t, settings=self.settings)
 			self.service = self.client.create_service(self.binding, self.location)
 
+			self.put_line_to_queue('Getting Phone Inventory from CUCM')
+
 			# Get Phone Device Name from CUCM - Excluded 3rd Party SIP Devices
 			phone_mac = self.execute_sql_query(self.service, "Get Phone Device Name",
-											   "select name from device where tkclass ='1' order by name")
+											   "SELECT d.name AS name, t.name as model, d.description, n.dnorpattern AS directory FROM device d INNER JOIN devicenumplanmap dmap ON dmap.fkdevice = d.pkid INNER JOIN numplan n ON dmap.fknumplan = n.pkid INNER JOIN typemodel t on d.tkmodel = t.enum INNER JOIN typepatternusage tpu on n.tkpatternusage = tpu.enum WHERE d.tkclass = 1 AND dmap.numplanindex = 1 AND tpu.enum = 2 ORDER BY d.name")
+
+			self.put_line_to_queue('Getting Phone Types from CUCM')
 
 			# Get Phone Product Table from CUCM
 			phone_type = self.execute_sql_query(self.service, "Get Phone Type",
 												"select enum,name from typemodel")
 
+			self.put_line_to_queue('Getting Device Pool data from CUCM')
+
 			device_pool = self.execute_sql_query(self.service, "Get Device Pool",
 												 "select count(Device.name) Device_count, DevicePool.name Device_Pool, typemodel.name Device_Type from Device inner join DevicePool on Device.fkDevicePool=DevicePool.pkid inner join typemodel on device.tkmodel=typemodel.enum group by DevicePool.name,typemodel.name order by DevicePool.name")
 
+			self.put_line_to_queue('Getting Dynamic Registration data from CUCM')
+			
 			registrationdynamic = self.execute_sql_query(self.service, "Get Registration Dynamic",
 												 "select d.name,rd.lastknownipaddress,rd.lastknownucm,rd.lastseen,rd.lastactive from device as d left join registrationdynamic as rd on rd.fkdevice = d.pkid where d.tkclass = '1' order by name")
 
@@ -840,6 +854,7 @@ class Application(ttk.Frame):
 			self.phonetype_array = []
 			self.dp_results = []
 			self.dynamic_results = []
+			self.all_phones = []
 
 			# Add device names to global array
 			for mac in phone_mac['response']:
@@ -863,7 +878,17 @@ class Application(ttk.Frame):
 					"lastactive": str(datetime.fromtimestamp(int(item[4].text)))
 				})
 
+			for item in phone_mac['response']:
+				self.all_phones.append({
+					"name": str(item[0].text),
+					"model": str(item[1].text),
+					"description": str(item[2].text),
+					"directory": str(int(item[3].text))
+				})
+
 			self.chunks = [self.phone_array[x:x + 1000] for x in range(0, len(self.phone_array), 1000)]
+
+			self.put_line_to_queue('Getting RisPort data from CUCM.')
 
 			# Set up RIS Port Connection
 			self.connect_risport()
@@ -874,17 +899,27 @@ class Application(ttk.Frame):
 			num_phones = str(len(self.phone_array))
 			num_chunks = str(len(self.chunks))
 
-			self.put_line_to_queue('Device count: ' + num_phones + ' phones.\n')
-			self.put_line_to_queue('Dividing into: ' + num_chunks + ' batches of 1000.\n')
+			self.put_line_to_queue('Collecting RisPort data for: ' + num_phones + ' phones.')
+			self.put_line_to_queue('Dividing devices into batches of 1000: ' + num_chunks + ' batches to process.')
 
 			for index, chunk in enumerate(self.chunks):
 				self.put_line_to_queue('Processing batch: ' + str(index + 1))
-				self.execute_ris_query(self.ris_service, "Get Phone", chunk)
-				if (index + 1) % 15 == 0:
-					self.put_line_to_queue('Throttling RisPort Requests for 60 seconds.\n')
-					time.sleep(60)
+				retry_delay = 15  # Initial delay in seconds
+				for _ in range(max_retries):
+					results = self.execute_ris_query(self.ris_service, chunk)
+					if results == "Success":
+						break
+					elif results == "Fault":
+						self.put_line_to_queue('RisPort Fault. Retrying in ' + str(retry_delay) + ' seconds.')
+						time.sleep(retry_delay)
+						retry_delay *= 2
+				else:
+					self.put_line_to_queue('RisPort Fault. Maximum retries reached. Skipping batch: ' + str(index + 1))
+					self.put_line_to_queue('Report may be incomplete.')
+					break
+						
 				if str(index + 1) == num_chunks:
-					self.put_line_to_queue('Batch: ' + str(index + 1) + ' processed.\n')
+					self.put_line_to_queue('Batch: ' + str(index + 1) + ' processed.')
 				else:
 					self.put_line_to_queue('Batch: ' + str(index + 1) + ' processed. Moving to next batch.')
 
@@ -897,8 +932,13 @@ class Application(ttk.Frame):
 
 			# Let's merge the two dataframes and fill in the null values
 			df1 = pd.DataFrame(self.ris_results)	
-			df2 = pd.DataFrame(self.dynamic_results)	
-			df_merged = df1.merge(df2, on='name') 
+			df2 = pd.DataFrame(self.dynamic_results)
+			df3 = pd.DataFrame(self.all_phones)
+			dfs = [df1, df3]
+			df_merged = reduce(lambda  left,right: pd.merge(left,right,on=['name','model','directory','description'],
+                                            how='outer'), dfs).fillna('')
+
+			df_merged = df_merged.merge(df2,on='name')
 			df_merged = df_merged.where(df_merged.notnull(), None)
 
 			if self.debugging == 'Yes':
@@ -1095,7 +1135,7 @@ class Application(ttk.Frame):
 			'15.0': 3,
 		}
 		self.option = ttk.OptionMenu(self.areaOne, self.var,*choices,style="TMenubutton")
-		self.option.configure(takefocus=1)
+		# self.option.configure(takefocus=1)
 		ttk.Label(self.areaOne, text="AXL Version/Type: ",width=25,font=labelFont).grid(row=1,sticky=W,padx=5,pady=2)
 		self.option.grid(row=1, column=1, sticky='NSEW',padx=5,pady=10)
 		ttk.Label(self.areaOne, text="IP Address: ",width=25,font=labelFont).grid(row=2,sticky=W,padx=5,pady=2)
