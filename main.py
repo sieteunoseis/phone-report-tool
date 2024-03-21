@@ -10,12 +10,10 @@ J. Worden (jeremy.worden@gmail.com)
 
 """
 from bs4 import BeautifulSoup
-from multiprocessing import Process
 from zeep import Client, Settings
 from zeep.cache import SqliteCache
 from zeep.transports import Transport
 from zeep.exceptions import Fault
-from zeep.plugins import HistoryPlugin
 from requests import Session
 from requests.auth import HTTPBasicAuth
 from urllib3 import disable_warnings
@@ -23,11 +21,9 @@ from urllib3.exceptions import InsecureRequestWarning
 from tkinter import *
 from tkinter import font
 from tkinter import ttk
-from tkinter.filedialog import askopenfilename
 from ttkthemes import themed_tk as tk
-from time import gmtime, strftime
+from time import strftime
 import json
-from itertools import chain
 import atexit
 import configparser
 import concurrent.futures
@@ -43,10 +39,8 @@ import queue
 import threading
 import time
 import tkinter
-import tkinter.scrolledtext as tkst
 import urllib
 import xlsxwriter
-from collections import Counter
 import ctypes
 import pandas as pd
 from multiprocessing import cpu_count
@@ -462,7 +456,7 @@ class Application(ttk.Frame):
 			par[p]=par[p].split("#",1)[0].strip() # To get rid of inline comments
 			
 		globals().update(par)
-		self.log_queue.put(updates)
+		self.log_queue.put(par['updates'])
 	
 	##############################################	
 	##											##
