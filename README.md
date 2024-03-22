@@ -7,6 +7,7 @@ Tested using Python 3.8.18 (Issues with Tkinter on version 3.9 and above)
 
 ### Clean up directory (MAC OS X)
 * rm -rf build dist myenv
+* rm -rf build dist
 
 ### Clean up directory (Windows)
 * rmdir /s /q build dist
@@ -21,7 +22,7 @@ pip3 install -r requirements.txt
 
 ### Create Virtual Enviroment with pynenv (Windows)
 ```
-python -m venv myenv
+py -m venv myenv
 .\myenv\Scripts\activate
 python -m pip install --upgrade pip
 pip3 install -r requirements.txt
@@ -52,6 +53,9 @@ rm -rf Phone\ Report\ Tool
 
 ### Testing app (MAC OS X)
 * ./dist/Phone\ Report\ Tool.app/Contents/MacOS/Phone\ Report\ Tool
+
+### TODO
+* Add export/import of accounts (https://www.geeksforgeeks.org/how-to-encrypt-and-decrypt-strings-in-python/)
 
 ### Giving Back
 

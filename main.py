@@ -6,7 +6,7 @@ from __future__ import absolute_import, division, unicode_literals, print_functi
 A PythonTk GUI program to pull phone information from Cisco UC Applications via AXL/RISPORT
 
 J. Worden (jeremy.worden@gmail.com)
-2023
+2024
 
 """
 from bs4 import BeautifulSoup
@@ -120,11 +120,11 @@ class Application(ttk.Frame):
 			# Structure is empty
 			return True	
 	
-	##############################################	
-	##											##
-	##     		TKINTER CONNECTION SECTION		##
-	##											##
-	##############################################
+	"""
+	
+	TKINTER GUI SECTION
+
+	"""
 		
 	# Module to update Tkinter Dropdown
 	def update_option(self):
@@ -229,11 +229,11 @@ class Application(ttk.Frame):
 				data = "%s" % (row[0])
 				self.savedaxl.append(data)
 				
-	##############################################	
-	##											##
-	##     		 	MISC SECTION				##
-	##											##
-	##############################################
+	"""
+	
+	MISC FUNCTION SECTION
+
+	"""
 	
 	def is_valid_ipv4_address(self,address):
 		try:
@@ -273,11 +273,11 @@ class Application(ttk.Frame):
 		elif os.name == 'posix':
 			subprocess.call(('xdg-open', filepath))
 				
-	##############################################	
-	##											##
-	##     			EXCEL SECTION				##
-	##											##
-	##############################################
+	"""
+	
+	EXCEL SECTION
+
+	"""
 
 	def xlsx_phone_report(self, filename, data, dpdata):
 		# is this application frozen by PyInstaller or CX Freeze?
@@ -352,11 +352,11 @@ class Application(ttk.Frame):
 		elif os.name == 'posix':
 			subprocess.call(('xdg-open', filepath))
 			
-	##############################################	
-	##											##
-	##     		  LOGGER SECTION				##
-	##											##
-	##############################################
+	"""
+	
+	LOGGER SECTION
+
+	"""
 
 	def get_logger_text(self):
 		#   "kick start" listener if task list is empty
@@ -418,11 +418,11 @@ class Application(ttk.Frame):
 		else:
 			print('Listener: Off')
 				
-	##############################################	
-	##											##
-	##     			HELP SECTION				##
-	##											##
-	##############################################
+	"""
+	
+	HELP SECTION
+
+	"""
 	
 	def about_text(self):
 		# is this application frozen by PyInstaller or CX Freeze?
@@ -458,11 +458,11 @@ class Application(ttk.Frame):
 		globals().update(par)
 		self.log_queue.put(par['updates'])
 	
-	##############################################	
-	##											##
-	##     	SOAP/AXL/RISPORT GUI SECTION	    ##
-	##											##
-	##############################################
+	"""
+	
+	SOAP API SECTION
+
+	"""
 			
 	def connect_axl(self):
 		#   "kick start" listener if task list is empty
@@ -513,7 +513,6 @@ class Application(ttk.Frame):
 			return False
 			
 	def connect_risport(self):
-		# AXL connection module variables
 		server = self.ipentry.get()
 		self.ris_wsdl = f'https://{server}:8443/realtimeservice2/services/RISService70?wsdl'
 		self.ris_location = f'https://{server}:8443/realtimeservice2/services/RISService70'
@@ -610,6 +609,15 @@ class Application(ttk.Frame):
 			# Start the load operations and mark each future with its URL
 			future_to_url = {executor.submit(self.load_url, url['port_url'], 120): url['port_url'] for url in self.ris_results}
 			for index, future in enumerate(concurrent.futures.as_completed(future_to_url)):
+				# Output progress to console
+				quarter = int((len(future_to_url) / 4)) # Divide by 4 to get 25% increments
+				if (index + 1) % quarter == 0:
+					completed = int(((index + 1) / quarter) * 25)
+					if (index + 1) == len(future_to_url):
+						self.put_line_to_queue("Collect Port data completed: 100%\n")
+					else:
+						self.put_line_to_queue("Collect Port data completed: " + str(completed) + "%")
+
 				url = future_to_url[future]
 				try:
 					data = future.result()
@@ -624,17 +632,6 @@ class Application(ttk.Frame):
 					port_info = self.make_port_soup(data, match['name'])
 					self.ris_results[match_index].update(port_info)
 					
-					quarter = int((len(future_to_url) / 4))
-					if int(index) > 0:
-						if (index + 1) % quarter == 0:
-							completed = int(((index + 1) / quarter) * 25)
-							if (index + 1) == len(future_to_url):
-								self.put_line_to_queue("Collect Port data completed: 100%\n")
-							else:
-								self.put_line_to_queue("Collect Port data completed: " + str(completed) + "%")
-					else:
-						self.put_line_to_queue("CDP Collection Error")
-					
 	def get_status_info(self):
 		#   "kick start" listener if task list is empty
 		if not self.task_list:
@@ -645,6 +642,14 @@ class Application(ttk.Frame):
 			future_to_url = {executor.submit(self.load_url, url['status_url'], 120):
 					url['status_url'] for url in self.ris_results}
 			for index, future in enumerate(concurrent.futures.as_completed(future_to_url)):
+				# Output progress to console
+				quarter = int((len(future_to_url) / 4)) # Divide by 4 to get 25% increments
+				if (index + 1) % quarter == 0:
+					completed = int(((index + 1) / quarter) * 25)
+					if (index + 1) == len(future_to_url):
+						self.put_line_to_queue("Collect Status data completed: 100%\n")
+					else:
+						self.put_line_to_queue("Collect Status data completed: " + str(completed) + "%")
 				url = future_to_url[future]
 				try:
 					data = future.result()
@@ -658,16 +663,6 @@ class Application(ttk.Frame):
 					match_index = next(index for (index, d) in enumerate(self.ris_results) if d['status_url'] == url)
 					itl_info = self.make_status_soup(data, match['name'])
 					self.ris_results[match_index].update(itl_info)
-					quarter = int((len(future_to_url) / 4))
-					if int(index) > 0:
-						if (index + 1) % quarter == 0:
-							completed = int(((index + 1) / quarter) * 25)
-							if (index + 1) == len(future_to_url):
-								self.put_line_to_queue("Collect Status data completed: 100%\n")
-							else:
-								self.put_line_to_queue("Collect Status data completed: " + str(completed) + "%")
-					else:
-						self.put_line_to_queue("ITL Collection Error")
 	
 	def get_network_info(self):
 		#   "kick start" listener if task list is empty
@@ -679,6 +674,14 @@ class Application(ttk.Frame):
 			future_to_url = {executor.submit(self.load_url, url['network_url'], 240):
 					url['network_url'] for url in self.ris_results}
 			for index, future in enumerate(concurrent.futures.as_completed(future_to_url)):
+				# Output progress to console
+				quarter = int((len(future_to_url) / 4)) # Divide by 4 to get 25% increments
+				if (index + 1) % quarter == 0:
+					completed = int(((index + 1) / quarter) * 25)
+					if (index + 1) == len(future_to_url):
+						self.put_line_to_queue("Collect Network data completed: 100%\n")
+					else:
+						self.put_line_to_queue("Collect Network data completed: " + str(completed) + "%")
 				url = future_to_url[future]
 				try:
 					data = future.result()
@@ -692,17 +695,6 @@ class Application(ttk.Frame):
 					match_index = next(index for (index, d) in enumerate(self.ris_results) if d['network_url'] == url)
 					network_info = self.make_network_soup(data, match['name'])
 					self.ris_results[match_index].update(network_info)
-
-					quarter = int((len(future_to_url) / 4))
-					if int(index) > 0:
-						if (index + 1) % quarter == 0:
-							completed = int(((index + 1) / quarter) * 25)
-							if (index + 1) == len(future_to_url):
-								self.put_line_to_queue("Collect Network data completed: 100%\n")
-							else:
-								self.put_line_to_queue("Collect Network data completed: " + str(completed) + "%")
-					else:
-						self.put_line_to_queue("Network Setup Collection Error")
 
 	def search_model(self, enum):
 		l = dict(self.phonetype_array)
@@ -821,24 +813,24 @@ class Application(ttk.Frame):
 			self.client = Client(wsdl=self.wsdl, transport=self.t, settings=self.settings)
 			self.service = self.client.create_service(self.binding, self.location)
 
-			self.put_line_to_queue('Getting Phone Inventory from CUCM')
+			self.put_line_to_queue('Getting Phone Inventory from CUCM.')
 
 			# Get Phone Device Name from CUCM - Excluded 3rd Party SIP Devices
 			phone_mac = self.execute_sql_query(self.service, "Get Phone Device Name",
 											   "SELECT d.name AS name, t.name as model, d.description, n.dnorpattern AS directory FROM device d INNER JOIN devicenumplanmap dmap ON dmap.fkdevice = d.pkid INNER JOIN numplan n ON dmap.fknumplan = n.pkid INNER JOIN typemodel t on d.tkmodel = t.enum INNER JOIN typepatternusage tpu on n.tkpatternusage = tpu.enum WHERE d.tkclass = 1 AND dmap.numplanindex = 1 AND tpu.enum = 2 ORDER BY d.name")
 
-			self.put_line_to_queue('Getting Phone Types from CUCM')
+			self.put_line_to_queue('Getting Phone Types from CUCM.')
 
 			# Get Phone Product Table from CUCM
 			phone_type = self.execute_sql_query(self.service, "Get Phone Type",
 												"select enum,name from typemodel")
 
-			self.put_line_to_queue('Getting Device Pool data from CUCM')
+			self.put_line_to_queue('Getting Device Pool data from CUCM.')
 
 			device_pool = self.execute_sql_query(self.service, "Get Device Pool",
 												 "select count(Device.name) Device_count, DevicePool.name Device_Pool, typemodel.name Device_Type from Device inner join DevicePool on Device.fkDevicePool=DevicePool.pkid inner join typemodel on device.tkmodel=typemodel.enum group by DevicePool.name,typemodel.name order by DevicePool.name")
 
-			self.put_line_to_queue('Getting Dynamic Registration data from CUCM')
+			self.put_line_to_queue('Getting Dynamic Registration data from CUCM.')
 			
 			registrationdynamic = self.execute_sql_query(self.service, "Get Registration Dynamic",
 												 "select d.name,rd.lastknownipaddress,rd.lastknownucm,rd.lastseen,rd.lastactive from device as d left join registrationdynamic as rd on rd.fkdevice = d.pkid where d.tkclass = '1' order by name")
@@ -880,7 +872,7 @@ class Application(ttk.Frame):
 					"directory": str(int(item[3].text))
 				})
 
-			self.chunks = [self.phone_array[x:x + 1000] for x in range(0, len(self.phone_array), 1000)]
+			self.chunks = [self.phone_array[x:x + 2000] for x in range(0, len(self.phone_array), 2000)]
 
 			self.put_line_to_queue('Getting RisPort data from CUCM.')
 
@@ -894,28 +886,29 @@ class Application(ttk.Frame):
 			num_chunks = str(len(self.chunks))
 
 			self.put_line_to_queue('Collecting RisPort data for: ' + num_phones + ' phones.')
-			self.put_line_to_queue('Dividing devices into batches of 1000: ' + num_chunks + ' batches to process.')
+			self.put_line_to_queue('Dividing devices into batches of 2000: ' + num_chunks + ' batches to process.')
 
 			for index, chunk in enumerate(self.chunks):
 				self.put_line_to_queue('Processing batch: ' + str(index + 1))
-				retry_delay = 15  # Initial delay in seconds
+				threading.Event().wait(10)
+				retry_delay = 60  # Initial delay in seconds
 				for _ in range(max_retries):
 					results = self.execute_ris_query(self.ris_service, chunk)
 					if results == "Success":
+						if str(index + 1) == num_chunks:
+							self.put_line_to_queue('Batch: ' + str(index + 1) + ' processed.')
+						else:
+							self.put_line_to_queue('Batch: ' + str(index + 1) + ' processed. Moving to next batch.')
 						break
 					elif results == "Fault":
 						self.put_line_to_queue('RisPort Fault. Retrying in ' + str(retry_delay) + ' seconds.')
-						time.sleep(retry_delay)
+						threading.Event().wait(retry_delay) # wait() Method, useable sans thread.
+						self.put_line_to_queue('Finished waiting. Retrying batch: ' + str(index + 1))
 						retry_delay *= 2
 				else:
 					self.put_line_to_queue('RisPort Fault. Maximum retries reached. Skipping batch: ' + str(index + 1))
 					self.put_line_to_queue('Report may be incomplete.')
 					pass
-						
-				if str(index + 1) == num_chunks:
-					self.put_line_to_queue('Batch: ' + str(index + 1) + ' processed.')
-				else:
-					self.put_line_to_queue('Batch: ' + str(index + 1) + ' processed. Moving to next batch.')
 
 			if cdp == "Yes":
 				self.put_line_to_queue('Retrieving advanced information for devices. This may take a while.\n')
@@ -1002,17 +995,16 @@ class Application(ttk.Frame):
 			self.task_list.remove(task_thread)
 		else:
 			self.put_line_to_queue('\n**** Please wait for task to complete before running again ****\n')
-		
-	##############################################	
-	##											##
-	##     			BUTTON  SECTION				##
-	##											##
-	##############################################
+			
+	"""
+
+	BUTTON SECTION
+	
+	"""
 				
 	def button_axl_task(self):
 		if len(self.ipentry.get()) > 0:
 			task = threading.Thread(target=lambda: self.test_axl(task),daemon=True)
-
 			#   "kick start" listener if task list is empty
 			if not self.task_list:
 				self.listen(force_start=True)
@@ -1190,14 +1182,22 @@ class Application(ttk.Frame):
 		button_advanced.grid(row=4,column=1,sticky='NSEW',padx=5, pady=10)
 
 		# Area 3
-		self.areaThree = LabelFrame(self)
+		# Get the current screen height. Get scale factor for Windows DPI.
+		screen_height = root.winfo_screenheight()
+		console_height = screen_height / 40
+		if os.name == 'nt':
+			scale_factor = ctypes.windll.shcore.GetScaleFactorForDevice(0)
+			if scale_factor > 100:
+				console_height = screen_height / 50
+
+		self.areaThree = ttk.Frame(self)
 		self.areaThree.grid_columnconfigure(0, weight=1)
 		self.areaThree.grid_rowconfigure(0, weight=1)
 		self.areaThree.grid(row=6,columnspan=7,sticky='NSEW',padx=5,pady=5,ipadx=5)
-		self.text_console = Text(self.areaThree,bg='black',fg='white',highlightbackground="#efefef",highlightcolor="#657a9e")
+		self.text_console = Text(self.areaThree,bg='black',fg='white',highlightbackground="#efefef",highlightcolor="#657a9e",height=console_height)
 		self.text_console.grid(row=6,sticky='NSEW',columnspan=6)
 
-		#   initiate queue, task list, logger
+		# Initiate queue, task list, logger
 		self.logger.addHandler(TextHandler(self.text_console))
 		
 		# Tear Off Dotted Line On Menu
@@ -1220,11 +1220,14 @@ if __name__ == "__main__":
 	""" Run as a stand-alone script """
 
 	root = tk.ThemedTk()
-
 	root.resizable(width=False, height=False)
 	root.configure(background='#F0F0F0')
-	
+
+	# Windows DPI Scaling	
 	if os.name == 'nt':
+		scale_factor = ctypes.windll.shcore.GetScaleFactorForDevice(0) / 100
+		if scale_factor > 1:
+			root.tk.call('tk', 'scaling', scale_factor)
 		root.iconbitmap(default='app.ico')
 
 	root.title("Phone Report Tool")
