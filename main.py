@@ -611,12 +611,15 @@ class Application(ttk.Frame):
 			for index, future in enumerate(concurrent.futures.as_completed(future_to_url)):
 				# Output progress to console
 				quarter = int((len(future_to_url) / 4)) # Divide by 4 to get 25% increments
-				if (index + 1) % quarter == 0:
-					completed = int(((index + 1) / quarter) * 25)
-					if (index + 1) == len(future_to_url):
-						self.put_line_to_queue("Collect Port data completed: 100%\n")
-					else:
-						self.put_line_to_queue("Collect Port data completed: " + str(completed) + "%")
+				if quarter > 0:
+					if (index + 1) % quarter == 0:
+						completed = int(((index + 1) / quarter) * 25)
+						if (index + 1) == len(future_to_url):
+							self.put_line_to_queue("Collect Port data completed: 100%\n")
+						else:
+							self.put_line_to_queue("Collect Port data completed: " + str(completed) + "%")
+				else:
+					self.put_line_to_queue("Collect Port data completed: 100%")
 
 				url = future_to_url[future]
 				try:
@@ -644,12 +647,13 @@ class Application(ttk.Frame):
 			for index, future in enumerate(concurrent.futures.as_completed(future_to_url)):
 				# Output progress to console
 				quarter = int((len(future_to_url) / 4)) # Divide by 4 to get 25% increments
-				if (index + 1) % quarter == 0:
-					completed = int(((index + 1) / quarter) * 25)
-					if (index + 1) == len(future_to_url):
-						self.put_line_to_queue("Collect Status data completed: 100%\n")
-					else:
-						self.put_line_to_queue("Collect Status data completed: " + str(completed) + "%")
+				if quarter > 0:
+					if (index + 1) % quarter == 0:
+						completed = int(((index + 1) / quarter) * 25)
+						if (index + 1) == len(future_to_url):
+							self.put_line_to_queue("Collect Status data completed: 100%\n")
+						else:
+							self.put_line_to_queue("Collect Status data completed: " + str(completed) + "%")
 				url = future_to_url[future]
 				try:
 					data = future.result()
@@ -676,12 +680,13 @@ class Application(ttk.Frame):
 			for index, future in enumerate(concurrent.futures.as_completed(future_to_url)):
 				# Output progress to console
 				quarter = int((len(future_to_url) / 4)) # Divide by 4 to get 25% increments
-				if (index + 1) % quarter == 0:
-					completed = int(((index + 1) / quarter) * 25)
-					if (index + 1) == len(future_to_url):
-						self.put_line_to_queue("Collect Network data completed: 100%\n")
-					else:
-						self.put_line_to_queue("Collect Network data completed: " + str(completed) + "%")
+				if quarter > 0:
+					if (index + 1) % quarter == 0:
+						completed = int(((index + 1) / quarter) * 25)
+						if (index + 1) == len(future_to_url):
+							self.put_line_to_queue("Collect Network data completed: 100%\n")
+						else:
+							self.put_line_to_queue("Collect Network data completed: " + str(completed) + "%")
 				url = future_to_url[future]
 				try:
 					data = future.result()
@@ -869,7 +874,7 @@ class Application(ttk.Frame):
 					"name": str(item[0].text),
 					"model": str(item[1].text),
 					"description": str(item[2].text),
-					"directory": str(int(item[3].text))
+					"directory": str(item[3].text)
 				})
 
 			self.chunks = [self.phone_array[x:x + 2000] for x in range(0, len(self.phone_array), 2000)]
